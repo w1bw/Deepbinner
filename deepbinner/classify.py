@@ -164,7 +164,7 @@ def classify_fast5_files(fast5_files, start_model, start_input_size, end_model, 
             if full_output:
                 print('\t'.join(output))
 
-        print_classification_progress(len(fast5s_processed) - 1, len(fast5_files), 'fast5s',
+        print_classification_progress(len(fast5s_processed), len(fast5_files), 'fast5s',
                                       out_dest=out_dest)
 
     if full_output:
