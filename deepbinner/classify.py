@@ -24,7 +24,7 @@ import numpy as np
 from keras.models import load_model
 from keras import backend
 import tensorflow as tf
-from .load_fast5s import find_all_fast5s, get_read_id_and_signal
+from .load_fast5s import find_all_fast5s, get_read_id_and_signal, find_fast5_read_ids_and_signals
 from .trim_signal import normalise
 from .misc import print_summary_table
 
@@ -120,14 +120,15 @@ def classify_fast5_files(fast5_files, start_model, start_input_size, end_model, 
         print_output_header(args.verbose, using_read_starts, using_read_ends, output_size)
 
     classifications, read_id_to_fast5_file = {}, {}
-    for fast5_batch in chunker(fast5_files, args.batch_size):
+    fast5s_processed = set()
+    for read_data in chunk_read_ids_and_signals(fast5_files, args.batch_size):
         read_ids, signals = [],  []
 
-        for i, fast5_file in enumerate(fast5_batch):
-            read_id, signal = get_read_id_and_signal(fast5_file)
+        for read_id, signal, fast5_file in read_data:
             if signal is None:
                 continue
             read_id_to_fast5_file[read_id] = fast5_file
+            fast5s_processed.add(fast5_file)
             read_ids.append(read_id)
             signals.append(signal)
 
@@ -163,7 +164,7 @@ def classify_fast5_files(fast5_files, start_model, start_input_size, end_model, 
             if full_output:
                 print('\t'.join(output))
 
-        print_classification_progress(len(classifications), len(fast5_files), 'fast5s',
+        print_classification_progress(len(fast5s_processed) - 1, len(fast5_files), 'fast5s',
                                       out_dest=out_dest)
 
     if full_output:
@@ -259,6 +260,16 @@ def determine_input_type(input_file_or_dir):
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
+
+def chunk_read_ids_and_signals(fast5s, size):
+    read_data_chunk = []
+    for i, read_data in enumerate(find_fast5_read_ids_and_signals(fast5s)):
+        read_data_chunk.append(read_data)
+        if i > 0 and i % size == 0:
+            yield read_data_chunk
+            read_data_chunk = []
+    if read_data_chunk:
+        yield read_data_chunk
 
 def print_output_header(verbose, using_read_starts, using_read_ends, output_size):
     if not verbose:

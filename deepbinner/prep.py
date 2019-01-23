@@ -39,13 +39,7 @@ def prep(args):
         mappy_aligner = None
 
     read_count = 0
-    for fast5_file in fast5s:
-        try:
-            read_id, signal = get_read_id_and_signal(fast5_file)
-        except KeyError:
-            continue
-        if read_id not in read_seqs:
-            continue
+    for read_id, signal in fast5s:
 
         print('', file=sys.stderr)
         print(fast5_file, file=sys.stderr)

@@ -21,13 +21,17 @@ import h5py
 import sys
 
 
+
+def get_read_id_and_signal_from_read_group(h5readgroup):
+    read_id = h5readgroup.attrs['read_id'].decode()
+    signal = h5readgroup['Signal'][:]
+    return read_id, signal
+
 def get_read_id_and_signal(fast5_file):
     try:
         with h5py.File(fast5_file, 'r') as hdf5_file:
             read_group = list(hdf5_file['Raw/Reads/'].values())[0]
-            read_id = read_group.attrs['read_id'].decode()
-            signal = read_group['Signal'][:]
-        return read_id, signal
+            return get_read_id_and_signal_from_read_group(read_group)
     except OSError:
         return None, None
 
@@ -45,3 +49,21 @@ def find_all_fast5s(directory, verbose=False):
         noun = 'fast5' if len(fast5s) == 1 else 'fast5s'
         print('{} {} found'.format(len(fast5s), noun), file=sys.stderr)
     return fast5s
+
+
+def find_fast5_read_ids_and_signals(fast5s):
+    for fast5 in fast5s:
+        with h5py.File(fast5, 'r') as hdf5_file:
+            if 'Raw' in hdf5_file:
+                # this is a single-read fasta file
+                read_group = list(hdf5_file['Raw/Reads/'].values())[0]
+                id, signal = get_read_id_and_signal_from_read_group(read_group)
+                yield id, signal, fast5
+            else:
+                # In multi-fast5 file, each read is in a top-level group, and the read data are one level down in "Raw"
+                for read in hdf5_file.values():
+                    # this is a single-read fasta file
+                    read_group = read['Raw']
+                    id, signal = get_read_id_and_signal_from_read_group(read_group)
+                    yield id, signal, fast5
+
