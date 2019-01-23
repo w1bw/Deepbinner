@@ -45,6 +45,8 @@ def realtime(args):
                                   end_input_size, output_size, ignore_files)
                 waiting = False
             else:
+                if args.nowait:
+                    return
                 if waiting:
                     print('.', end='', flush=True)
                 else:

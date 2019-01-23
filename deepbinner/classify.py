@@ -87,7 +87,7 @@ def load_trained_model(model_file, out_dest=sys.stderr):
     if not pathlib.Path(model_file).is_file():
         sys.exit('Error: {} does not exist'.format(model_file))
     print('Loading {}... '.format(model_file), file=out_dest, end='', flush=True)
-    model = load_model(model_file)
+    model = load_model(str(model_file))
     print('done', file=out_dest)
     try:
         assert len(model.inputs) == 1
