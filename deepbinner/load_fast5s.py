@@ -129,7 +129,7 @@ class Fast5Writer:
         fastq = get_best_fastq_location(read)
         if fastq:
             #print(read[fastq].value, end='', file=self.fastqfile)
-            self.fastqfile.write(read[fastq][()])
+            self.fastqfile.write(read[fastq][()].decode())
 
 
     def ensure_output_files(self):
@@ -138,7 +138,8 @@ class Fast5Writer:
             self.fast5file = h5py.File(filename, 'w')
         if self.fastq and not self.fastqfile:
             # a hack to put fastq at same level as per-barcode fast5 dir
-            self.fastqfile = gzip.open(self.dir + '.fastq.gz', 'wb')
+            # self.fastqfile = gzip.open(self.dir + '.fastq.gz', 'wb')
+            self.fastqfile = open(self.dir + '.fastq', 'w')
 
 
     def close(self):
