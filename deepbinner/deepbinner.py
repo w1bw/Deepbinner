@@ -166,6 +166,8 @@ def bin_subparser(subparsers):
                                     'classify command)')
     required_args.add_argument('--reads', type=str, required=True,
                                help='FASTA or FASTQ reads')
+    required_args.add_argument('--type', type=str, choices=('fastq', 'fasta', 'fast5'),
+                               help='type of read file (or directory of files if fast5)')
     required_args.add_argument('--out_dir', type=str, required=True,
                                help='Directory to output binned read files')
 

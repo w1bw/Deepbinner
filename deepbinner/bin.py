@@ -21,12 +21,13 @@ import subprocess
 import sys
 
 from .misc import get_open_function
+from .load_fast5s import find_fast5_reads, find_all_fast5s, Fast5Writer
 
 
 def bin_reads(args):
     classifications = load_classifications(args.classes)
     class_names = sorted(class_to_class_names(x) for x in set(classifications.values()))
-    input_type = get_sequence_file_type(args.reads)
+    input_type = args.type if args.type else get_sequence_file_type(args.reads)
     out_filenames = get_output_filenames(class_names, args.out_dir, input_type)
     make_output_dir(args.out_dir, out_filenames)
     write_read_files(args.reads, classifications, out_filenames, input_type)
@@ -105,6 +106,10 @@ def get_output_filenames(class_names, out_dir, input_type):
 
 
 def write_read_files(reads_filename, classifications, out_filenames, input_type):
+    if input_type == 'fast5':
+        write_fast5_files(reads_filename, classifications, out_filenames)
+        return
+
     p = re.compile(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
 
     open_func = get_open_function(reads_filename)
@@ -203,3 +208,33 @@ def print_summary_and_zip(bin_counts, out_filenames):
         display_name = 'none' if class_name == 'unclassified' else class_name
         print('  {:<9} {:>9}     {}'.format(display_name, bin_counts[class_name], gzipped_filename))
     print()
+
+
+def write_fast5_files(reads_arg, classifications, out_filenames):
+    print('Writing fast5 output files')
+    out_dirnames = {bc: out_filenames[bc][:-6] for bc in out_filenames}
+
+    for d in out_dirnames.values():
+        os.makedirs(d, exist_ok=True)
+
+    fast5_writers = {bc: Fast5Writer(out_dirnames[bc], bc) for bc in out_dirnames}
+
+    count = 0
+
+    for read, group, id, fast5, multi in find_fast5_reads(find_all_fast5s(reads_arg)):
+        bc = class_to_class_names(classifications.get(id, None))
+        fast5_writers[bc].add_read(read)
+        count += 1
+        if count % 1000 == 0:
+            print_progress(count)
+    print_progress(count)
+    print('\n\nBinned reads:\n')
+
+    for class_name in out_filenames:
+        display_name = 'none' if class_name == 'unclassified' else class_name
+        print('  {:<9} {:>9}     {}'.format(display_name, fast5_writers[class_name].read_count, out_dirnames[class_name]))
+
+    for fw in fast5_writers.values():
+        fw.close()
+
+    return
