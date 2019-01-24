@@ -25,13 +25,16 @@ import gzip
 def get_read_id(h5readgroup):
     return h5readgroup.attrs['read_id'].decode()
 
+
 def get_signal(h5readgroup):
     return h5readgroup['Signal'][:]
+
 
 def get_read_id_and_signal_from_read_group(h5readgroup):
     read_id = h5readgroup.attrs['read_id'].decode()
     signal = h5readgroup['Signal'][:]
     return get_read_id(h5readgroup), get_signal(h5readgroup)
+
 
 def get_read_id_and_signal(fast5_file):
     try:
@@ -40,6 +43,23 @@ def get_read_id_and_signal(fast5_file):
             return get_read_id_and_signal_from_read_group(read_group)
     except OSError:
         return None, None
+
+
+def get_fastq(read):
+    def fastq_suffix(name):
+        if name.lower().endswith('/fastq'):
+            return name
+        return None
+
+    try:
+        analyses = read['Analyses']
+        path = analyses.visit(fastq_suffix)
+        if path:
+            return analyses[path][()].decode()
+        else:
+            return None
+    except:
+        return None
 
 
 def find_all_fast5s(directory, verbose=False):
@@ -126,10 +146,11 @@ class Fast5Writer:
 
 
     def write_fastq(self, read):
-        fastq = get_best_fastq_location(read)
+        #fastq = get_best_fastq_location(read)
+        fastq = get_fastq(read)
         if fastq:
             #print(read[fastq].value, end='', file=self.fastqfile)
-            self.fastqfile.write(read[fastq][()].decode())
+            self.fastqfile.write(fastq)
 
 
     def ensure_output_files(self):
@@ -148,48 +169,3 @@ class Fast5Writer:
         if self.fastqfile:
             self.fastqfile.close()
 
-
-def get_best_fastq_location(read):
-    """
-    This function returns the path in the FAST5 file to the best FASTQ. If there are multiple
-    basecall locations, it returns the last one (hopefully from the most recent basecalling).
-
-    Taken from rrwick's fast5_to_fastq
-    """
-    names = []
-    read.visit(names.append)
-
-    basecall_locations = sorted([x for x in names if x.upper().endswith('FASTQ')])
-    two_d_locations = [x for x in basecall_locations if 'BASECALLED_2D' in x.upper()]
-    template_locations = [x for x in basecall_locations if 'TEMPLATE' in x.upper()]
-    complement_locations = [x for x in basecall_locations if 'COMPLEMENT' in x.upper()]
-
-    # If the read has 2D basecalling, then that's what we use.
-    if two_d_locations:
-        return two_d_locations[-1]
-
-    # If the read has both template and complement basecalling, then we choose the best based on
-    # mean qscore.
-    elif template_locations and complement_locations:
-        template_location = template_locations[-1]
-        complement_location = complement_locations[-1]
-        mean_template_qscore = get_mean_score(hdf5_file, template_location)
-        mean_complement_qscore = get_mean_score(hdf5_file, complement_location)
-        if mean_template_qscore >= mean_complement_qscore:
-            return template_location
-        else:
-            return complement_location
-
-    # If the read has only template basecalling (normal for 1D) or only complement, then that's
-    # what we use.
-    elif template_locations:
-        return template_locations[-1]
-    elif complement_locations:
-        return complement_locations[-1]
-
-    # If the read has none of the above, but still has a fastq value in its hdf5, that's weird, but
-    # we'll consider it a 1d read and use it.
-    elif basecall_locations:
-        return basecall_locations[-1]
-
-    return None
