@@ -172,6 +172,8 @@ def bin_subparser(subparsers):
                                help='Directory to output binned read files')
 
     other_args = group.add_argument_group('Other')
+    other_args.add_argument('--extract_fastq', action='store_true',
+                               help='If output type is fast5, also extract fastqs while writing')
     other_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
                             help='Show this help message and exit')
 

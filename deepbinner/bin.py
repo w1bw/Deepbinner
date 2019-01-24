@@ -30,7 +30,7 @@ def bin_reads(args):
     input_type = args.type if args.type else get_sequence_file_type(args.reads)
     out_filenames = get_output_filenames(class_names, args.out_dir, input_type)
     make_output_dir(args.out_dir, out_filenames)
-    write_read_files(args.reads, classifications, out_filenames, input_type)
+    write_read_files(args.reads, classifications, out_filenames, input_type, args.extract_fastq)
 
 
 def load_classifications(class_filename):
@@ -105,9 +105,9 @@ def get_output_filenames(class_names, out_dir, input_type):
     return output_filenames
 
 
-def write_read_files(reads_filename, classifications, out_filenames, input_type):
+def write_read_files(reads_filename, classifications, out_filenames, input_type, extract_fastq):
     if input_type == 'fast5':
-        write_fast5_files(reads_filename, classifications, out_filenames)
+        write_fast5_files(reads_filename, classifications, out_filenames, extract_fastq)
         return
 
     p = re.compile(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
@@ -210,14 +210,14 @@ def print_summary_and_zip(bin_counts, out_filenames):
     print()
 
 
-def write_fast5_files(reads_arg, classifications, out_filenames):
+def write_fast5_files(reads_arg, classifications, out_filenames, extract_fastq):
     print('Writing fast5 output files')
     out_dirnames = {bc: out_filenames[bc][:-6] for bc in out_filenames}
 
     for d in out_dirnames.values():
         os.makedirs(d, exist_ok=True)
 
-    fast5_writers = {bc: Fast5Writer(out_dirnames[bc], bc) for bc in out_dirnames}
+    fast5_writers = {bc: Fast5Writer(out_dirnames[bc], bc, extract_fastq) for bc in out_dirnames}
 
     count = 0
 
